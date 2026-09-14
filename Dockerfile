@@ -22,9 +22,11 @@ COPY --chown=pptruser:pptruser . .
 RUN mkdir -p storage/whatsapp-auth storage/imports \
   && chown -R pptruser:pptruser storage
 
+# Tambahkan PUPPETEER_EXECUTABLE_PATH ke Chrome bawaan image
 ENV NODE_ENV=production \
     PORT=3000 \
-    PUPPETEER_NO_SANDBOX=false
+    PUPPETEER_NO_SANDBOX=false \
+    PUPPETEER_EXECUTABLE_PATH=/usr/bin/google-chrome-stable
 
 USER pptruser
 EXPOSE 3000
