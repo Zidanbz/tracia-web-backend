@@ -1,0 +1,51 @@
+name: tracia-backend-stack
+
+services:
+  tracia-backend:
+    container_name: tracia
+    build:
+      context: .
+      dockerfile: Dockerfile
+    restart: unless-stopped
+    cap_add:
+      - SYS_ADMIN
+    env_file:
+      - .env
+    environment:
+      - NODE_ENV=production
+      - PORT=3000
+    ports:
+      - "3000:3000"
+    volumes:
+      - tracia_backend_storage:/app/storage
+    shm_size: 1gb
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "20m"
+        max-file: "5"
+    deploy:
+      resources:
+        limits:
+          memory: 2G
+    healthcheck:
+      test:
+        - CMD
+        - node
+        - -e
+        - "fetch('http://127.0.0.1:3000/health/live').then(r=>{if(!r.ok)process.exit(1)}).catch(()=>process.exit(1))"
+      interval: 15s
+      timeout: 5s
+      retries: 3
+      start_period: 30s
+    networks:
+      - tracia-network
+
+volumes:
+  tracia_backend_storage:
+    name: tracia_backend_storage
+
+networks:
+  tracia-network:
+    name: tracia-network
+    driver: bridge

@@ -1,0 +1,152 @@
+#!/usr/bin/env node
+
+/**
+ * Module dependencies.
+ */
+
+var app = require('../app');
+var debug = require('debug')('service-wa:server');
+var http = require('http');
+let socketapi = require('../utils/socket')
+const env = require('../src/config/env');
+const logger = require('../src/config/logger');
+const knex = require('../src/database/knex');
+const sessionMiddleware = require('../src/middleware/session');
+const { manager: whatsappManager } = require('../src/modules/whatsapp/whatsapp-client-manager');
+const messageWorker = require('../src/modules/queue/message-worker');
+const contactVerificationWorker = require('../src/modules/contact-imports/contact-verification-worker');
+/**
+ * Get port from environment and store in Express.
+ */
+
+var port = normalizePort(env.port);
+app.set('port', port);
+
+/**
+ * Create HTTP server.
+ */
+
+var server = http.createServer(app);
+socketapi.io.attach(server,{
+  cors : {
+    origin : new URL(env.appUrl).origin,
+    credentials: true,
+  }
+})
+socketapi.io.engine.use(sessionMiddleware);
+socketapi.io.use((socket, next) => {
+  const session = socket.request.session;
+  if (!session?.user || !session.permissions?.includes('whatsapp.view')) {
+    return next(new Error('UNAUTHORIZED_SOCKET'));
+  }
+  return next();
+});
+socketapi.io.on('connection', (socket) => {
+  socket.join('whatsapp:default');
+  logger.info({ userId: socket.request.session.user.id }, 'Socket connected');
+});
+/**
+ * Listen on provided port, on all network interfaces.
+ */
+
+server.listen(port);
+server.on('error', onError);
+server.on('listening', onListening);
+const wakeContactVerificationWorker = () => contactVerificationWorker.wake();
+whatsappManager.on('ready', wakeContactVerificationWorker);
+if (env.messageWorker.enabled) messageWorker.start();
+if (env.contactVerificationWorker.enabled) contactVerificationWorker.start();
+whatsappManager.connect().catch((err) => logger.warn({ err }, 'WhatsApp auto-connect on startup skipped'));
+
+/**
+ * Normalize a port into a number, string, or false.
+ */
+
+function normalizePort(val) {
+  var port = parseInt(val, 10);
+
+  if (isNaN(port)) {
+    // named pipe
+    return val;
+  }
+
+  if (port >= 0) {
+    // port number
+    return port;
+  }
+
+  return false;
+}
+
+/**
+ * Event listener for HTTP server "error" event.
+ */
+
+function onError(error) {
+  if (error.syscall !== 'listen') {
+    throw error;
+  }
+
+  var bind = typeof port === 'string'
+    ? 'Pipe ' + port
+    : 'Port ' + port;
+
+  // handle specific listen errors with friendly messages
+  switch (error.code) {
+    case 'EACCES':
+      console.error(bind + ' requires elevated privileges');
+      process.exit(1);
+      break;
+    case 'EADDRINUSE':
+      console.error(bind + ' is already in use');
+      process.exit(1);
+      break;
+    default:
+      throw error;
+  }
+}
+
+/**
+ * Event listener for HTTP server "listening" event.
+ */
+
+function onListening() {
+  var addr = server.address();
+  var bind = typeof addr === 'string'
+    ? 'pipe ' + addr
+    : 'port ' + addr.port;
+  logger.info({ port: addr.port }, 'Server started');
+  debug('Listening on ' + bind);
+}
+
+let isShuttingDown = false;
+async function shutdown(signal) {
+  if (isShuttingDown) return;
+  isShuttingDown = true;
+  logger.info({ signal }, 'Graceful shutdown started');
+
+  const forceExit = setTimeout(() => {
+    logger.fatal('Graceful shutdown timed out');
+    process.exit(1);
+  }, 10000);
+  forceExit.unref();
+
+  server.close(async (error) => {
+    if (error) logger.error({ err: error }, 'HTTP server close failed');
+    socketapi.io.close();
+    whatsappManager.off('ready', wakeContactVerificationWorker);
+    messageWorker.stop();
+    contactVerificationWorker.stop();
+    await whatsappManager.destroy().catch((waError) => {
+      logger.error({ err: waError }, 'WhatsApp client close failed');
+    });
+    await knex.destroy().catch((dbError) => {
+      logger.error({ err: dbError }, 'Database pool close failed');
+    });
+    clearTimeout(forceExit);
+    process.exit(error ? 1 : 0);
+  });
+}
+
+process.on('SIGTERM', () => shutdown('SIGTERM'));
+process.on('SIGINT', () => shutdown('SIGINT'));

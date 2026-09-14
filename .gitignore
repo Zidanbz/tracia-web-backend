@@ -1,0 +1,35 @@
+# Node & Dependency
+node_modules/
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+.npm
+
+# Environment Variables & Secrets
+.env
+.env.*
+!.env.example
+*.crt
+*.key
+*.pem
+
+# WhatsApp LocalAuth & Storage
+storage/whatsapp-auth/
+storage/imports/*
+!storage/imports/.gitkeep
+
+# Logs & Runtime
+logs/
+*.log
+pids
+*.pid
+*.seed
+*.pid.lock
+
+# Coverage & Tests
+coverage/
+.nyc_output/
+
+# OS Files
+.DS_Store
+Thumbs.db

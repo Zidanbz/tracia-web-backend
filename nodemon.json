@@ -1,0 +1,15 @@
+{
+  "watch": [
+    "app.js",
+    "bin",
+    "routes",
+    "src",
+    "utils"
+  ],
+  "ext": "js,mjs,cjs,json",
+  "ignore": [
+    "node_modules/**",
+    "storage/**",
+    "test/**"
+  ]
+}
