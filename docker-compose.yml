@@ -20,6 +20,8 @@ services:
       - "host.docker.internal:host-gateway"
     volumes:
       - tracia_backend_storage:/app/storage
+      - ../tracia-web-frontend/views:/wa-service-fe/views:ro
+      - ../tracia-web-frontend/public:/wa-service-fe/public:ro
     shm_size: 1gb
     logging:
       driver: "json-file"
