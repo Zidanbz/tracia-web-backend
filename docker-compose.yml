@@ -14,15 +14,15 @@ services:
     environment:
       - NODE_ENV=production
       - PORT=3000
-      - TRUST_PROXY=true   # <--- DITARUH DI SINI
+      - TRUST_PROXY=true
     ports:
       - "3000:3000"
     extra_hosts:
       - "host.docker.internal:host-gateway"
     volumes:
       - tracia_backend_storage:/app/storage
-      - ../tracia-web-frontend/views:/wa-service-fe/views:ro
-      - ../tracia-web-frontend/public:/wa-service-fe/public:ro
+      - ../wa-service-fe/views:/wa-service-fe/views:ro
+      - ../wa-service-fe/public:/wa-service-fe/public:ro
     shm_size: 1gb
     logging:
       driver: "json-file"
