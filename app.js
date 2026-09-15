@@ -67,10 +67,19 @@ const viewsDirectory = fs.existsSync(path.join(frontendRoot, 'views'))
   : (fs.existsSync(path.join(frontendRoot, 'login.ejs')) ? frontendRoot : path.join(frontendRoot, 'views'));
 
 app.disable('x-powered-by');
+app.disable('view cache');
+app.set('view cache', false);
 if (env.trustProxy) app.set('trust proxy', 1);
 app.set('views', viewsDirectory);
 app.set('view engine', 'ejs');
-app.engine('ejs', engine.__express);
+app.engine('ejs', (filePath, options, callback) => {
+  if (typeof engine.clearCache === 'function') {
+    engine.clearCache();
+  }
+  options.cache = false;
+  if (options.settings) options.settings['view cache'] = false;
+  return engine.__express(filePath, options, callback);
+});
 
 app.use(pinoHttp({ logger }));
 app.use(helmet({
