@@ -53,6 +53,10 @@ const schema = z.object({
   CONTACT_VERIFICATION_LOCK_TIMEOUT_MS: z.coerce.number().int().min(60000).max(3600000).default(300000),
   CONTACT_VERIFICATION_MAX_ATTEMPTS: z.coerce.number().int().min(1).max(5).default(3),
   CONTACT_VERIFICATION_CACHE_TTL_SECONDS: z.coerce.number().int().min(300).max(604800).default(86400),
+  META_PHONE_NUMBER_ID: optionalNonEmpty(z.string()),
+  META_WABA_ID: optionalNonEmpty(z.string()),
+  META_ACCESS_TOKEN: optionalNonEmpty(z.string()),
+  META_WEBHOOK_VERIFY_TOKEN: z.string().default('tracia_meta_verify_2026'),
 }).superRefine((value, context) => {
   if (value.BROADCAST_RECIPIENT_INTERVAL_MAX_MS < value.BROADCAST_RECIPIENT_INTERVAL_MS) {
     context.addIssue({
@@ -146,5 +150,11 @@ module.exports = Object.freeze({
     lockTimeoutMs: values.CONTACT_VERIFICATION_LOCK_TIMEOUT_MS,
     maxAttempts: values.CONTACT_VERIFICATION_MAX_ATTEMPTS,
     cacheTtlSeconds: values.CONTACT_VERIFICATION_CACHE_TTL_SECONDS,
+  }),
+  meta: Object.freeze({
+    phoneNumberId: values.META_PHONE_NUMBER_ID || null,
+    wabaId: values.META_WABA_ID || null,
+    accessToken: values.META_ACCESS_TOKEN || null,
+    webhookVerifyToken: values.META_WEBHOOK_VERIFY_TOKEN || 'tracia_meta_verify_2026',
   }),
 });

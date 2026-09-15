@@ -32,6 +32,7 @@ const campaignsRouter = require('./src/modules/campaigns/campaigns.routes');
 const campaignMonitoringRouter = require('./src/modules/campaign-monitoring/campaign-monitoring.routes');
 const campusDashboardRouter = require('./src/modules/campus-dashboard/campus-dashboard.routes');
 const messageTimingRouter = require('./src/modules/message-timing/message-timing.routes');
+const metaWebhookRouter = require('./src/modules/meta-webhook/meta-webhook.routes');
 const pagesRouter = require('./src/modules/pages/pages.routes');
 const knex = require('./src/database/knex');
 const indexRouter = require('./routes/index');
@@ -107,6 +108,9 @@ app.get('/health/ready', async (req, res) => {
     });
   }
 });
+
+// Webhook publik Meta WhatsApp Cloud API (bebas CSRF & Session, diautentikasi lewat verify token / HMAC)
+app.use('/api/v1/meta-webhook', metaWebhookRouter);
 
 app.use(sessionMiddleware);
 app.use('/api/v1', authenticateApiKey);
