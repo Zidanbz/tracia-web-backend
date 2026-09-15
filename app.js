@@ -37,12 +37,38 @@ const knex = require('./src/database/knex');
 const indexRouter = require('./routes/index');
 const usersRouter = require('./routes/users');
 
+const fs = require('fs');
 const app = express();
-const frontendRoot = path.resolve(__dirname, '../wa-service-fe');
+
+function findFrontendRoot() {
+  const candidates = [
+    process.env.FRONTEND_ROOT,
+    path.resolve(__dirname, '../wa-service-fe'),
+    path.resolve(__dirname, '../tracia-web-frontend'),
+    '/wa-service-fe',
+    '/tracia-web-frontend',
+    path.resolve(__dirname, 'views'),
+  ].filter(Boolean);
+
+  for (const candidate of candidates) {
+    if (fs.existsSync(path.join(candidate, 'views'))) {
+      return candidate;
+    }
+    if (fs.existsSync(path.join(candidate, 'login.ejs'))) {
+      return path.dirname(candidate);
+    }
+  }
+  return path.resolve(__dirname, '../wa-service-fe');
+}
+
+const frontendRoot = findFrontendRoot();
+const viewsDirectory = fs.existsSync(path.join(frontendRoot, 'views'))
+  ? path.join(frontendRoot, 'views')
+  : (fs.existsSync(path.join(frontendRoot, 'login.ejs')) ? frontendRoot : path.join(frontendRoot, 'views'));
 
 app.disable('x-powered-by');
 if (env.trustProxy) app.set('trust proxy', 1);
-app.set('views', path.join(frontendRoot, 'views'));
+app.set('views', viewsDirectory);
 app.set('view engine', 'ejs');
 app.engine('ejs', engine.__express);
 
@@ -133,7 +159,22 @@ app.use((err, req, res, next) => {
 
   res.locals.message = message;
   res.locals.error = env.nodeEnv === 'development' ? err : {};
-  return res.status(status).render('error');
+  return res.status(status).render('error', (renderErr, html) => {
+    if (renderErr) {
+      req.log.error({ err: renderErr }, 'Failed to render error view');
+      return res.status(status).send(`
+        <!DOCTYPE html>
+        <html>
+        <head><title>Error ${status}</title></head>
+        <body style="font-family: sans-serif; padding: 40px; text-align: center;">
+          <h2>${status} - ${message}</h2>
+          ${env.nodeEnv === 'development' ? `<pre style="text-align: left; background: #f4f4f4; padding: 15px; border-radius: 5px;">${err.stack || err}</pre>` : ''}
+        </body>
+        </html>
+      `);
+    }
+    return res.send(html);
+  });
 });
 
 if (env.session.usesEphemeralSecret) {
