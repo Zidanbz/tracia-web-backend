@@ -9,6 +9,7 @@
     "db:migrate": "knex --knexfile knexfile.js migrate:latest",
     "db:rollback": "knex --knexfile knexfile.js migrate:rollback",
     "db:seed": "knex --knexfile knexfile.js seed:run",
+    "db:export": "node scripts/export-db.js",
     "migration:preflight": "node scripts/cutover-preflight.js",
     "migration:validate": "node scripts/cutover-validate.js",
     "supabase:schema:apply": "node scripts/supabase-apply-baseline.js",

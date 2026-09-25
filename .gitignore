@@ -20,6 +20,8 @@ storage/imports/*
 
 # Logs & Runtime
 logs/
+dumps/
+*.sql
 *.log
 pids
 *.pid
